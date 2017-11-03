@@ -13,7 +13,7 @@ class User(UserMixin, db.Model):
 
     # Ensures table will be named in plural and not in singular
     # as is the name of the model
-    __tablename__ = 'employees'
+    __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(60), index=True, unique=True)
@@ -62,7 +62,7 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(60), unique=True)
     description = db.Column(db.String(200))
-    employees = db.relationship('Employee', backref='role',
+    employees = db.relationship('User', backref='role',
                                 lazy='dynamic')
 
     def __repr__(self):
