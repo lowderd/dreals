@@ -4,9 +4,10 @@ from flask import abort, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
 from . import admin
-from .forms import CityForm, RestaurantForm, UserAssignForm
+from .forms import CityForm, HappyHourForm,  RestaurantForm, UserAssignForm
+from .forms import DAY_OPTIONS
 from .. import db
-from ..models import City, Restaurant, User
+from ..models import City, HappyHour, Restaurant, User
 
 
 def check_admin():
@@ -15,6 +16,47 @@ def check_admin():
     """
     if not current_user.is_admin:
         abort(403)
+
+
+@admin.route('/users')
+@login_required
+def list_users():
+    """
+    List all users
+    """
+    check_admin()
+
+    users = User.query.all()
+    return render_template('admin/users/users.html',
+                           users=users, title='Users')
+
+
+@admin.route('/users/assign/<int:id>', methods=['GET', 'POST'])
+@login_required
+def assign_user(id):
+    """
+    Assign a department and a role to an user
+    """
+    check_admin()
+
+    user = User.query.get_or_404(id)
+
+    form = UserAssignForm(obj=user)
+    if form.validate_on_submit():
+        if str(form.role.data) == "admin":
+            user.is_admin = True
+        else:
+            user.is_admin = False
+        db.session.add(user)
+        db.session.commit()
+        flash('You have successfully assigned a department and role.')
+
+        # redirect to the roles page
+        return redirect(url_for('admin.list_users'))
+
+    return render_template('admin/users/user.html',
+                           user=user, form=form,
+                           title='Assign User')
 
 
 # City Views
@@ -109,8 +151,6 @@ def delete_city(id):
     # redirect to the cities page
     return redirect(url_for('admin.list_cities'))
 
-    return render_template(title="Delete City")
-
 
 @admin.route('/restaurants')
 @login_required
@@ -134,11 +174,11 @@ def add_restaurant():
 
     add_restaurant = True
 
+    restaurant = Restaurant()
     form = RestaurantForm()
     if form.validate_on_submit():
-        restaurant = Restaurant(name=form.name.data,
-                                description=form.description.data)
-
+        form.populate_obj(restaurant)
+        restaurant.city_id = form.city.data.id
         try:
             # add restaurant to the database
             db.session.add(restaurant)
@@ -170,7 +210,9 @@ def edit_restaurant(id):
     form = RestaurantForm(obj=restaurant)
     if form.validate_on_submit():
         restaurant.name = form.name.data
-        restaurant.description = form.description.data
+        restaurant.city_id = form.city.data.id
+        restaurant.deal = form.deal.data
+        restaurant.menu = form.menu.data
         db.session.add(restaurant)
         db.session.commit()
         flash('You have successfully edited the restaurant.')
@@ -178,7 +220,7 @@ def edit_restaurant(id):
         # redirect to the restaurants page
         return redirect(url_for('admin.list_restaurants'))
 
-    form.description.data = restaurant.description
+    form.deal.data = restaurant.deal
     form.name.data = restaurant.name
     return render_template('admin/restaurants/restaurant.html', add_restaurant=add_restaurant,
                            form=form, title="Edit Restaurant")
@@ -201,42 +243,96 @@ def delete_restaurant(id):
     return redirect(url_for('admin.list_restaurants'))
 
 
-@admin.route('/users')
+@admin.route('/restaurants/<int:id>', methods=['GET', 'POST'])
 @login_required
-def list_users():
+def list_restaurant_details(id):
     """
-    List all users
+    List all information and Happy Hours for the Restaurant
     """
     check_admin()
 
-    users = User.query.all()
-    return render_template('admin/users/users.html',
-                           users=users, title='Users')
+    restaurant = Restaurant.query.filter_by(id=id).first()
+    return render_template('admin/restaurants/details.html',
+                           restaurant=restaurant, title='{0} Details'.format(restaurant.name))
 
 
-@admin.route('/users/assign/<int:id>', methods=['GET', 'POST'])
+@admin.route('/restaurants/restaurant/<restaurant_id>/add', methods=['GET', 'POST'])
 @login_required
-def assign_user(id):
+def add_happy_hour(restaurant_id):
     """
-    Assign a department and a role to an user
+    Add a happy hour to a restaurant
     """
     check_admin()
 
-    user = User.query.get_or_404(id)
+    add = True
 
-    form = UserAssignForm(obj=user)
+    happy_hour = HappyHour()
+    form = HappyHourForm()
     if form.validate_on_submit():
-        if str(form.role.data) == "admin":
-            user.is_admin = True
-        else:
-            user.is_admin = False
-        db.session.add(user)
+        happy_hour.day = dict(DAY_OPTIONS).get(form.day.data)
+        happy_hour.restaurant_id = restaurant_id
+        happy_hour.start_time = form.start_time.data.time()
+        happy_hour.end_time = form.end_time.data.time()
+        try:
+            # add happy hour to the database
+            db.session.add(happy_hour)
+            db.session.commit()
+            flash('You have successfully added a new restaurant.')
+        except IOError:
+            # in case restaurant name already exists
+            flash('Error: happy hour already exists.')
+
+        # redirect to the restaurants page
+        return redirect(url_for('admin.list_restaurant_details', id=restaurant_id))
+
+    # load restaurant template
+    return render_template('admin/happyhours/happyhour.html', add_happy_hour=add,
+                           form=form, title='Add Happy Hour')
+
+
+@admin.route('/restaurants/<int:restaurant_id>/edit/<int:happy_hour_id>', methods=['GET', 'POST'])
+@login_required
+def edit_happy_hour(restaurant_id, happy_hour_id):
+    """
+    Edit a restaurant
+    """
+    check_admin()
+
+    add = False
+
+    happy_hour = HappyHour.query.get_or_404(happy_hour_id)
+    form = HappyHourForm(obj=happy_hour)
+    if form.validate_on_submit():
+        happy_hour.day = dict(DAY_OPTIONS).get(form.day.data)
+        happy_hour.restaurant_id = restaurant_id
+        happy_hour.start_time = form.start_time.data
+        happy_hour.end_time = form.end_time.data
+        db.session.add(happy_hour)
         db.session.commit()
-        flash('You have successfully assigned a department and role.')
+        flash('You have successfully edited the restaurant.')
 
-        # redirect to the roles page
-        return redirect(url_for('admin.list_users'))
+        # redirect to the restaurants page
+        return redirect(url_for('admin.list_restaurant_details', id=restaurant_id))
 
-    return render_template('admin/users/user.html',
-                           user=user, form=form,
-                           title='Assign User')
+    form.day = happy_hour.day
+    form.start_time = happy_hour.start_time.strftime("%I:%M %p")
+    form.end_time = happy_hour.end_time.strftime("%I:%M %p")
+    return render_template('admin/happyhours/happyhour.html', add_happy_hour=add,
+                           form=form, title="Edit Happy Hour")
+
+
+@admin.route('/restaurants/<int:restaurant_id>/delete/<int:happy_hour_id>', methods=['GET', 'POST'])
+@login_required
+def delete_happy_hour(restaurant_id, happy_hour_id):
+    """
+    Delete a happy hour from the database
+    """
+    check_admin()
+
+    happy_hour = HappyHour.query.get_or_404(happy_hour_id)
+    db.session.delete(happy_hour)
+    db.session.commit()
+    flash('You have successfully deleted the restaurant.')
+
+    # redirect to the restaurants page
+    return redirect(url_for('admin.list_restaurant_details', id=restaurant_id))

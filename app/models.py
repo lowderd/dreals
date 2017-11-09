@@ -61,8 +61,7 @@ class City(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(60), unique=True)
     description = db.Column(db.String(200))
-    restaurants = db.relationship('Restaurant', backref='restaurants',
-                                  lazy='dynamic')
+    restaurants = db.relationship('Restaurant', backref='restaurants', lazy='dynamic')
 
     def __repr__(self):
         return '<Cities: {}>'.format(self.name)
@@ -77,8 +76,26 @@ class Restaurant(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     city_id = db.Column(db.Integer, db.ForeignKey('cities.id'))
+    city = db.relationship('City')
     name = db.Column(db.String(60), unique=True)
-    description = db.Column(db.String(200))
+    deal = db.Column(db.String(200))
+    menu = db.Column(db.String(200))
+    happy_hours = db.relationship('HappyHour', backref='happy_hours', lazy='dynamic')
 
     def __repr__(self):
         return '<Restaurants: {}>'.format(self.name)
+
+
+class HappyHour(db.Model):
+    """
+    Create Happy Hour table
+    """
+
+    __tablename__ = 'happy_hours'
+
+    id = db.Column(db.Integer, primary_key=True)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurants.id'))
+    restaurant = db.relationship('Restaurant')
+    day = db.Column(db.String(10))
+    start_time = db.Column(db.Time())
+    end_time = db.Column(db.Time())

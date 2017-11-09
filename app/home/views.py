@@ -4,6 +4,7 @@ from flask import abort, render_template
 from flask_login import current_user, login_required
 
 from . import home
+from ..models import City
 
 
 # homepage
@@ -12,7 +13,8 @@ def homepage():
     """
     Render the homepage template on the / route
     """
-    return render_template('home/index.html', title="Welcome")
+    cities = City.query.all()
+    return render_template('home/index.html', cities=cities, title="Welcome")
 
 
 # standard user dashboard

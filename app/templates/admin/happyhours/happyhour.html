@@ -1,12 +1,12 @@
-<!-- app/templates/admin/restaurants/restaurant.html -->
+<!-- app/templates/admin/happyhours/happyhour.html -->
 
 {% import "bootstrap/wtf.html" as wtf %}
 {% extends "base.html" %}
 {% block title %}
-    {% if add_restaurant %}
-        Add Restaurant
+    {% if add_happy_hour %}
+        Add Happy Hour
     {% else %}
-        Edit Restaurant
+        Edit Happy Hour
     {% endif %}
 {% endblock %}
 {% block body %}
@@ -15,10 +15,10 @@
     <div class="middle">
       <div class="inner">
         <div class="center">
-            {% if add_restaurant %}
-                <h1>Add Restaurant</h1>
+            {% if add_happy_hour %}
+                <h1>Add Happy Hour</h1>
             {% else %}
-                <h1>Edit Restaurant</h1>
+                <h1>Edit Happy Hour</h1>
             {% endif %}
             <br/>
             {{ wtf.quick_form(form) }}

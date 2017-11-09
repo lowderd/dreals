@@ -8,9 +8,15 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="intro-message">
-                    <h1>Project Dream Team</h1>
-                    <h3>The best company in the world!</h3>
+                    <h1>Drunkan's Deals</h1>
+                    <h3>Select a city, and find a place to drink!</h3>
                     <hr class="intro-divider">
+                  {% for city in cities %}
+                    <a href="#" class="btn btn-default btn-lg">
+                      <i class="fa fa-plus"></i>
+                      {{ city.name }}
+                    </a>
+                  {% endfor %}
                 </div>
             </div>
         </div>
